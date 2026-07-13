@@ -104,35 +104,26 @@ void loop()
 
 ButtonEvent checkButtons()
 {
-    // Зчитуємо фізичний стан (інвертуємо, щоб true означало "натиснуто")
     bool btn1Pressed = (digitalRead(BUTTON_PIN) == LOW);
     bool btn2Pressed = (digitalRead(BUTTON_INTERNAL_BOOT) == LOW);
 
-    // Таймери для фіксації моменту натискання
     static unsigned long btn1Time = 0;
     static unsigned long btn2Time = 0;
 
-    // Прапорці, щоб зафіксувати, що кнопку вже "обробили" під час утримання
     static bool btn1HeldHandled = false;
     static bool btn2HeldHandled = false;
 
-    // Попередні стани кнопок для виявлення фронту (моменту натискання/відпускання)
     static bool btn1LastState = false;
     static bool btn2LastState = false;
 
-    // Дефолтний результат — подій немає
     ButtonEvent result = EVENT_NONE;
 
-    // =================================================================
-    // 1. ПЕРЕВІРКА ОДНОЧАСНОГО НАТИСКАННЯ (Комбо)
-    // =================================================================
     if (btn1Pressed && btn2Pressed)
     {
-        // Якщо обидві затиснуті — це миттєве комбо
-        btn1HeldHandled = true; // Блокуємо одиночні утримання
+        btn1HeldHandled = true;
         btn2HeldHandled = true;
         if (!btn1LastState || !btn2LastState)
-        { // Спрацює один раз при замиканні
+        {
             btn1LastState = btn1Pressed;
             btn2LastState = btn2Pressed;
             return EVENT_BOTH_CLICK;
@@ -140,21 +131,16 @@ ButtonEvent checkButtons()
         return EVENT_NONE;
     }
 
-    // =================================================================
-    // 2. ЛОГІКА КНОПКИ 1 (External)
-    // =================================================================
     if (btn1Pressed)
     {
         if (!btn1LastState)
         {
-            // Кнопку щойно натиснули (Фронт вниз)
             btn1Time = millis();
             btn1HeldHandled = false;
         }
-        // Кнопка утримується. Перевіряємо, чи минуло 1000 мс
         if ((millis() - btn1Time >= 1000) && !btn1HeldHandled)
         {
-            btn1HeldHandled = true; // Фіксуємо, що утримання оброблено
+            btn1HeldHandled = true;
             result = EVENT_BTN1_HOLD;
         }
     }
@@ -162,8 +148,6 @@ ButtonEvent checkButtons()
     {
         if (btn1LastState)
         {
-            // Кнопку щойно відпустили (Фронт вгору)
-            // Якщо утримання не було, і це не був брязкіт контактів (> 50мс)
             if (!btn1HeldHandled && (millis() - btn1Time > 50))
             {
                 result = EVENT_BTN1_CLICK;
@@ -171,9 +155,6 @@ ButtonEvent checkButtons()
         }
     }
 
-    // =================================================================
-    // 3. ЛОГІКА КНОПКИ 2 (BOOT)
-    // =================================================================
     if (btn2Pressed)
     {
         if (!btn2LastState)
@@ -198,7 +179,6 @@ ButtonEvent checkButtons()
         }
     }
 
-    // Зберігаємо поточний стан як попередній для наступного виклику
     btn1LastState = btn1Pressed;
     btn2LastState = btn2Pressed;
 
@@ -207,32 +187,26 @@ ButtonEvent checkButtons()
 
 void blinkingLeds(bool isBlink, bool isBlinkSinc, int blinkDelay)
 {
-    // КРОК 1: Якщо блимання не потрібне (isBlink == false) — просто гасимо діоди
     if (!isBlink)
     {
         digitalWrite(LED_RED_PIN, LOW);
         digitalWrite(LED_BLUE_PIN, LOW);
-        return; // Виходимо з функції, щоб не крутити таймери дарма
+        return;
     }
 
-    // КРОК 2: Єдиний асинхронний таймер на millis() для ОБВОХ режимів блимання.
-    // Використовуємо саме той blinkDelay, який прийшов як аргумент!
     if (millis() - lastBlinkTime >= (unsigned long)blinkDelay)
     {
         lastBlinkTime = millis();
-        ledState = !ledState; // Перемикаємо прапорець стану
+        ledState = !ledState;
     }
 
-    // КРОК 3: Розподіляємо логіку залежно від синхронності
     if (isBlinkSinc)
     {
-        // Синхронне блимання (разом): або обидва HIGH, або обидва LOW
         digitalWrite(LED_RED_PIN, ledState);
         digitalWrite(LED_BLUE_PIN, ledState);
     }
     else
     {
-        // Почергове блимання (у протифазі): один ledState, другий інвертований (!)
         digitalWrite(LED_RED_PIN, ledState);
         digitalWrite(LED_BLUE_PIN, !ledState);
     }
