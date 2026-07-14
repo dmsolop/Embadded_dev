@@ -1,7 +1,7 @@
 #include <Arduino.h>
 
-#define LED_PIN 9
-#define BTN_PIN 4
+#define LED_PIN 4
+#define BTN_PIN 15
 #define DEBOUNCE_MS 25
 
 bool raw = HIGH;
@@ -28,7 +28,7 @@ void loop()
     {
         LastChanges = millis();
         raw = reading;
-        }
+    }
 
     if ((millis() - LastChanges) > DEBOUNCE_MS && raw != stable)
     {
