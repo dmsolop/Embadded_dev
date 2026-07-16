@@ -41,9 +41,11 @@
 // const uint8_t LED_PIN = 9;
 // const int RAW_LIGHT = 3200;
 // const int RAW_DARK = 1200;
+
 // void setup() {
 // Serial.begin(115200);
 // }
+
 // void loop() {
 // int raw = analogRead(LDR_PIN);
 // int duty = constrain(map(raw, RAW_LIGHT, RAW_DARK, 255, 0), 0, 255);
@@ -65,12 +67,14 @@ const uint8_t LEDC_BITS = 12;
 const int PWM_MAX = 4095;
 const int RAW_LIGHT = 3200;
 const int RAW_DARK = 1200;
+
 void setup()
 {
     Serial.begin(115200);
     ledcSetup(LEDC_CH, 5000, LEDC_BITS);
     ledcAttachPin(LED_PIN, LEDC_CH);
 }
+
 void loop()
 {
     int raw = analogRead(LDR_PIN);
