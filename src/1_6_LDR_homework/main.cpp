@@ -23,6 +23,7 @@ const size_t numResolutions = sizeof(resolutions) / sizeof(resolutions[0]);
 const adc_attenuation_t attenFactor[] = {ADC_0db, ADC_2_5db, ADC_6db, ADC_11db};
 const size_t numAttenuations = sizeof(attenFactor) / sizeof(attenFactor[0]);
 const float uRefsMv[] = {1100.0, 1500.0, 2200.0, 3100.0};
+const char *attenLabels[] = {"0 dB", "2.5 dB", "6 dB", "11 dB"};
 
 void IRAM_ATTR setCurrentBitsIdx()
 {
@@ -87,8 +88,15 @@ void loop()
         hasChange = false;
         adcMax = calcAdcMax(resolutions[currentBitsIdx]);
         uRef = uRefsMv[currentAttenIdx];
+
         analogReadResolution(resolutions[currentBitsIdx]);
         analogSetPinAttenuation(LDR_PIN, attenFactor[currentAttenIdx]);
+
+        Serial.println("\n==================================================");
+        Serial.println("⚙️  РЕЖИМ ВИПРОБУВАЛЬНОГО СТЕНДУ ЗМІНЕНО!");
+        Serial.printf("   🔹 Розрядність АЦП : %d біт (Max ADC = %.0f)\n", resolutions[currentBitsIdx], adcMax);
+        Serial.printf("   🔸 Атенюація (Gain): %s (U_Ref = %.0f mV)\n", attenLabels[currentAttenIdx], uRef);
+        Serial.println("==================================================\n");
     }
 
     if (now - lastTime >= ADC_DELAY_MS)
