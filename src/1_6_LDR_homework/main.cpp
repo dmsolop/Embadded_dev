@@ -96,7 +96,7 @@ void loop()
         Serial.println("⚙️  РЕЖИМ ВИПРОБУВАЛЬНОГО СТЕНДУ ЗМІНЕНО!");
         Serial.printf("   🔹 Розрядність АЦП : %d біт (Max ADC = %.0f)\n", resolutions[currentBitsIdx], adcMax);
         Serial.printf("   🔸 Атенюація (Gain): %s (U_Ref = %.0f mV)\n", attenLabels[currentAttenIdx], uRef);
-        Serial.println("==================================================\n");
+        Serial.println("==================================================");
     }
 
     if (now - lastTime >= ADC_DELAY_MS)
@@ -107,6 +107,6 @@ void loop()
         float uMeasur = analogReadMilliVolts(LDR_PIN);
         float relativeError = calculateError(uCalc, uMeasur);
 
-        Serial.printf("\nADC= %d, U_Calc= %.3fmV, uMeasur= %.1fmV\n Відносна похибка= %.2f відсотків\n\n", raw, uCalc, uMeasur, relativeError);
+        Serial.printf("\nADC= %d, U_Calc= %.3fmV, uMeasur= %.1fmV\n Відносна похибка= %.2f відсотків", raw, uCalc, uMeasur, relativeError);
     }
 }
