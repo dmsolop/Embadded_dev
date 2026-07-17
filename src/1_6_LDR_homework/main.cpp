@@ -4,17 +4,47 @@
 #define BIT_BTN_PIN 6
 #define LDR_PIN 4
 #define LED_PIN 3
+#define DEBOUNCE_DELAY_MS 50
 #define ADC_DELAY_MS 1000
 #define ATTENUATION 0
 #define BITS 12
 
-const float uRef = 3300.0;
-const float adcMax = 4095.0;
-int lastTime = 0;
+float uRef = 3300.0;
+float adcMax = 4095.0;
+unsigned long lastTime = 0;
+volatile int currentBitsIdx = 3;
+volatile int currentAttenIdx = 3;
+volatile bool hasChange = false;
+volatile unsigned long lastDebounceBits = 0;
+volatile unsigned long lastDebounceAtten = 0;
 
 const int resolutions[] = {9, 10, 11, 12};
-const adc_attenuation_t attenFact[] = {ADC_0db, ADC_2_5db, ADC_6db, ADC_11db};
+const size_t numResolutions = sizeof(resolutions) / sizeof(resolutions[0]);
+const adc_attenuation_t attenFactor[] = {ADC_0db, ADC_2_5db, ADC_6db, ADC_11db};
+const size_t numAttenuations = sizeof(attenFactor) / sizeof(attenFactor[0]);
 const float uRefsMv[] = {1100.0, 1500.0, 2200.0, 3100.0};
+
+void IRAM_ATTR setCurrentBitsIdx()
+{
+    unsigned long currentTime = millis();
+    if (currentTime - lastDebounceBits >= DEBOUNCE_DELAY_MS)
+    {
+        currentBitsIdx = (currentBitsIdx + 1) % numResolutions;
+        hasChange = true;
+        lastDebounceBits = currentTime;
+    }
+}
+
+void IRAM_ATTR setCurrentAttenIdx()
+{
+    unsigned long currentTime = millis();
+    if (currentTime - lastDebounceAtten >= DEBOUNCE_DELAY_MS)
+    {
+        currentAttenIdx = (currentAttenIdx + 1) % numAttenuations;
+        hasChange = true;
+        lastDebounceAtten = currentTime;
+    }
+}
 
 float calculateVoltage(int rawData)
 {
@@ -27,6 +57,11 @@ float calculateError(float uCalc, float uMeas)
     return (absoluteError / uMeas) * 100.0;
 }
 
+float calcAdcMax(int bits)
+{
+    return adcMax = (1 << bits) - 1;
+}
+
 void setup()
 {
     Serial.begin(115200);
@@ -35,13 +70,27 @@ void setup()
     pinMode(ATTN_BTN_PIN, INPUT_PULLUP);
     pinMode(BIT_BTN_PIN, INPUT_PULLUP);
     pinMode(LED_PIN, OUTPUT);
+
+    attachInterrupt(digitalPinToInterrupt(ATTN_BTN_PIN), setCurrentAttenIdx, FALLING);
+    attachInterrupt(digitalPinToInterrupt(BIT_BTN_PIN), setCurrentBitsIdx, FALLING);
+
     analogSetPinAttenuation(LDR_PIN, ADC_11db);
     lastTime = millis();
 }
 
 void loop()
 {
-    int now = millis();
+    unsigned long now = millis();
+
+    if (hasChange)
+    {
+        hasChange = false;
+        adcMax = calcAdcMax(resolutions[currentBitsIdx]);
+        uRef = uRefsMv[currentAttenIdx];
+        analogReadResolution(resolutions[currentBitsIdx]);
+        analogSetPinAttenuation(LDR_PIN, attenFactor[currentAttenIdx]);
+    }
+
     if (now - lastTime >= ADC_DELAY_MS)
     {
         lastTime = now;
