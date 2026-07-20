@@ -36,8 +36,8 @@ unsigned long flashStartTime = 0;
 
 int lastDebounceLeft = 0;
 int lastDebounceRight = 0;
-bool lBtnClicked = false;
-bool rBtnClicked = false;
+volatile bool lBtnClicked = false;
+volatile bool rBtnClicked = false;
 int codeStep = 0;            // На якому кроці пароля ми перебуваємо (0, 1, 2)
 bool isCodeFlashing = false; // Чи горить зараз білий спалах підтвердження коду
 
@@ -53,14 +53,23 @@ volatile SystemState currentState = STATE_UNARMED;
 
 void updateLED();
 void readSensors();
+void handleButtons();
+void checkTimers();
+void IRAM_ATTR onButtonLeftChange();
+void IRAM_ATTR onButtonRightChange();
 
 void setup()
 {
     Serial.begin(115200);
     delay(1000);
 
-    digitalWrite(BUILTIN_LED, 0);
-    Serial.println("Піни та кнопки налаштовані");
+    pinMode(RIGHT_BTN_PIN, INPUT_PULLUP);
+    pinMode(LEFT_BTN_PIN, INPUT_PULLUP);
+
+    attachInterrupt(digitalPinToInterrupt(LEFT_BTN_PIN), onButtonLeftChange, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(RIGHT_BTN_PIN), onButtonRightChange, CHANGE);
+
+    neopixelWrite(BUILTIN_LED, 0, 0, 0);
 }
 
 void loop()
