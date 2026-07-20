@@ -271,3 +271,36 @@ void handleButtons()
         }
     }
 }
+
+void checkTimers()
+{
+    unsigned long now = millis();
+
+    // Авто-вихід з калібрування в режим охорони
+    if (currentState == STATE_CALIBRATION)
+    {
+        if (now - calibrationStartTime >= CALIBRATION_DURATION_MS)
+        {
+            currentState = STATE_ARMED;
+            // Тут автоматично спрацює логіка першого запуску автокалібрування в readSensors
+        }
+    }
+
+    // Таймаут введення пароля
+    if (currentState == STATE_ALARM && codeStep > 0)
+    {
+        if (now - lastCodePressTime >= CODE_TIMEOUT_MS)
+        {
+            codeStep = 0; // 5 секунд минуло, обнуляємо спробу
+        }
+    }
+
+    // Вимкнення спалаху кнопки через 150 мс
+    if (isCodeFlashing)
+    {
+        if (now - flashStartTime >= FLASH_DURATION_MS)
+        {
+            isCodeFlashing = false;
+        }
+    }
+}
