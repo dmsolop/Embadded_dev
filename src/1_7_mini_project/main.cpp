@@ -19,11 +19,17 @@ const float FILTER_HISTORY_WEIGHT = 0.98;
 // але датчик почне "пробачати" швидкі рухи і може просто не помітити тінь від руки.
 const float FILTER_NEW_WEIGHT = 0.02;
 
-#define ATTN_BTN_PIN 7
-#define BIT_BTN_PIN 6
+#define RIGHT_BTN_PIN 7
+#define LEFT_BTN_PIN 6
 #define LDR_PIN 4
 #define SENSOR_CHECK_INTERVAL_MS 50
 #define SHADOW_THRESHOLD_PERCENT 20 // Тінь — це падіння світла на 20% від бази
+#define DEBOUNCE_DELAY_MS 50
+
+int lastDebounceLeft = 0;
+int lastDebounceRight = 0;
+bool lBtnClicked = false;
+bool rBtnClicked = false;
 
 enum SystemState
 {
@@ -49,6 +55,10 @@ void setup()
 
 void loop()
 {
+    handleButtons();
+    checkTimers();
+    readSensors();
+    updateLED();
 }
 
 void updateLED()
@@ -151,6 +161,34 @@ void readSensors()
         if (dropPercentage >= SHADOW_THRESHOLD_PERCENT)
         {
             currentState = STATE_ALARM;
+        }
+    }
+}
+
+void IRAM_ATTR onButtonLeftChange()
+{
+    unsigned long currentTime = millis();
+    if (currentTime - lastDebounceLeft >= DEBOUNCE_DELAY_MS)
+    {
+        lastDebounceLeft = currentTime;
+
+        if (digitalRead(LEFT_BTN_PIN) == LOW)
+        {
+            lBtnClicked = true;
+        }
+    }
+}
+
+void IRAM_ATTR onButtonRightChange()
+{
+    unsigned long currentTime = millis();
+    if (currentTime - lastDebounceRight >= DEBOUNCE_DELAY_MS)
+    {
+        lastDebounceRight = currentTime;
+
+        if (digitalRead(RIGHT_BTN_PIN) == LOW)
+        {
+            rBtnClicked = true;
         }
     }
 }
