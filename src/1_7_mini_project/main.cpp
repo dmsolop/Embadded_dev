@@ -26,10 +26,20 @@ const float FILTER_NEW_WEIGHT = 0.02;
 #define SHADOW_THRESHOLD_PERCENT 20 // Тінь — це падіння світла на 20% від бази
 #define DEBOUNCE_DELAY_MS 50
 
+const unsigned long CALIBRATION_DURATION_MS = 2000; // Скільки триває калібрування
+const unsigned long CODE_TIMEOUT_MS = 5000;         // Вікно введення коду (5 секунд)
+const unsigned long FLASH_DURATION_MS = 150;        // Тривалість білого спалаху кнопки
+
+unsigned long calibrationStartTime = 0;
+unsigned long lastCodePressTime = 0;
+unsigned long flashStartTime = 0;
+
 int lastDebounceLeft = 0;
 int lastDebounceRight = 0;
 bool lBtnClicked = false;
 bool rBtnClicked = false;
+int codeStep = 0;            // На якому кроці пароля ми перебуваємо (0, 1, 2)
+bool isCodeFlashing = false; // Чи горить зараз білий спалах підтвердження коду
 
 enum SystemState
 {
@@ -67,9 +77,15 @@ void updateLED()
 
     static unsigned long lastUpdate = 0;
     static int brightness = 0;
-    static int fadeAmount = 5;       // крок дихання
-    static bool strobeState = false; // для миготіння тривоги
+    static int fadeAmount = 5;
+    static bool strobeState = false;
     static int fadePeriod = 20;
+
+    if (isCodeFlashing)
+    {
+        neopixelWrite(BUILTIN_LED, 150, 150, 150);
+        return; // Виходимо, ігноруючи інші режими
+    }
 
     switch (currentState)
     {
@@ -189,6 +205,69 @@ void IRAM_ATTR onButtonRightChange()
         if (digitalRead(RIGHT_BTN_PIN) == LOW)
         {
             rBtnClicked = true;
+        }
+    }
+}
+
+void handleButtons()
+{
+    unsigned long now = millis();
+
+    if (lBtnClicked)
+    {
+        lBtnClicked = false;
+
+        if (currentState == STATE_UNARMED)
+        {
+            // Якщо вимкнено — запускаємо калібрування
+            currentState = STATE_CALIBRATION;
+            calibrationStartTime = now;
+        }
+        else if (currentState == STATE_ALARM)
+        {
+            // Перевірка коду: очікуємо Праву Кнопку як Крок 0 або Крок 2
+            if (codeStep == 0)
+            {
+                codeStep = 1;
+                lastCodePressTime = now;
+                isCodeFlashing = true;
+                flashStartTime = now; // Вмикаємо білий спалах
+            }
+            else if (codeStep == 2)
+            {
+                // Код введено повністю і правильно! Знімаємо охорону
+                codeStep = 0;
+                currentState = STATE_UNARMED;
+            }
+            else
+            {
+                codeStep = 0; // Помилка — скидаємо прогрес
+            }
+        }
+    }
+
+    if (rBtnClicked)
+    {
+        rBtnClicked = false;
+
+        if (currentState == STATE_ARMED)
+        {
+            currentState = STATE_UNARMED;
+        }
+        else if (currentState == STATE_ALARM)
+        {
+            // Перевірка коду: очікуємо Ліву Кнопку як Крок 1
+            if (codeStep == 1)
+            {
+                codeStep = 2;
+                lastCodePressTime = now;
+                isCodeFlashing = true;
+                flashStartTime = now; // Вмикаємо білий спалах
+            }
+            else
+            {
+                codeStep = 0; // Помилка — скидаємо прогрес
+            }
         }
     }
 }
