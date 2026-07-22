@@ -40,6 +40,7 @@ volatile bool lBtnClicked = false;
 volatile bool rBtnClicked = false;
 int codeStep = 0;            // На якому кроці пароля ми перебуваємо (0, 1, 2)
 bool isCodeFlashing = false; // Чи горить зараз білий спалах підтвердження коду
+float ambientBaseline = -1.0;
 
 enum SystemState
 {
@@ -83,72 +84,84 @@ void loop()
 void updateLED()
 {
     unsigned long now = millis();
-
     static unsigned long lastUpdate = 0;
     static int brightness = 0;
     static int fadeAmount = 5;
     static bool strobeState = false;
-    static int fadePeriod = 20;
 
+    // Нові змінні для захисту від "спаму" діода
+    static SystemState prevLedState = (SystemState)-1;
+    static bool wasFlashing = false;
+
+    // ЛОГІКА БІЛОГО СПАЛАХУ (записуємо лише один раз при кліку)
     if (isCodeFlashing)
     {
-        neopixelWrite(BUILTIN_LED, 150, 150, 150);
-        return; // Виходимо, ігноруючи інші режими
+        if (!wasFlashing)
+        {
+            neopixelWrite(BUILTIN_LED, 150, 150, 150);
+            wasFlashing = true;
+        }
+        return;
+    }
+
+    // Якщо спалах закінчився, скидаємо стан для повернення коліру тривоги/охорони
+    if (wasFlashing)
+    {
+        wasFlashing = false;
+        prevLedState = (SystemState)-1;
+    }
+
+    if (prevLedState != currentState)
+    {
+        prevLedState = currentState;
+        brightness = 0;
+        fadeAmount = 5;
+        strobeState = false;
+        lastUpdate = 0;
     }
 
     switch (currentState)
     {
     case STATE_UNARMED:
-        // Просто вимкнений діод
-        neopixelWrite(BUILTIN_LED, 0, 0, 0);
+        if (lastUpdate == 0)
+        {
+            neopixelWrite(BUILTIN_LED, 0, 0, 0);
+            lastUpdate = now;
+        }
         break;
 
     case STATE_ARMED:
-        // Зелене дихання
-        if (now - lastUpdate >= fadePeriod)
+        if (now - lastUpdate >= 20)
         {
             lastUpdate = now;
             brightness += fadeAmount;
-
             if (brightness <= 0 || brightness >= 150)
-            {
                 fadeAmount = -fadeAmount;
-            }
             neopixelWrite(BUILTIN_LED, 0, brightness, 0);
         }
         break;
 
     case STATE_CALIBRATION:
-        // Швидке жовте миготіння (Червоний + Зелений = Жовтий)
         if (now - lastUpdate >= 150)
         {
             lastUpdate = now;
             strobeState = !strobeState;
             if (strobeState)
-            {
-                neopixelWrite(BUILTIN_LED, 100, 80, 0); // Помірний жовтий
-            }
+                neopixelWrite(BUILTIN_LED, 100, 80, 0);
             else
-            {
                 neopixelWrite(BUILTIN_LED, 0, 0, 0);
-            }
         }
         break;
 
     case STATE_ALARM:
-        // Поліцейський стробоскоп на всю потужність: Червоний / Синій кожні 80 мс
         if (now - lastUpdate >= 80)
         {
             lastUpdate = now;
             strobeState = !strobeState;
             if (strobeState)
-            {
-                neopixelWrite(BUILTIN_LED, 255, 0, 0); // Чистий Червоний
-            }
+                neopixelWrite(BUILTIN_LED, 255, 0, 0);
             else
-            {
-                neopixelWrite(BUILTIN_LED, 0, 0, 255); // Чистий Синій
-            }
+                neopixelWrite(BUILTIN_LED, 0, 0, 255);
         }
         break;
     }
@@ -162,7 +175,6 @@ void readSensors()
 
     unsigned long now = millis();
     static unsigned long lastSensorCheck = 0;
-    static float ambientBaseline = -1.0; // -1 означає, що першого заміру ще не було
 
     if (now - lastSensorCheck >= SENSOR_CHECK_INTERVAL_MS)
     {
@@ -231,6 +243,7 @@ void handleButtons()
             // Якщо вимкнено — запускаємо калібрування
             currentState = STATE_CALIBRATION;
             calibrationStartTime = now;
+            ambientBaseline = -1.0;
         }
         else if (currentState == STATE_ALARM)
         {
