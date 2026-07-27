@@ -27,6 +27,11 @@ public:
         digitalWrite(_pin, (_state == LedState::ON) ? HIGH : LOW);
     }
 
+    void toggle()
+    {
+        set(_state == LedState::ON ? LedState::OFF : LedState::ON);
+    }
+
     LedState getState() const
     {
         return _state;
