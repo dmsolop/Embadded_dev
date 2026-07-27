@@ -1,11 +1,6 @@
 #pragma once
 #include <Arduino.h>
-
-enum class LedState
-{
-    OFF,
-    ON
-};
+#include "config.h"
 
 template <uint8_t Pin, uint8_t BlinkTime = 100>
 class Led
