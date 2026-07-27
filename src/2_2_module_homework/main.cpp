@@ -2,7 +2,7 @@
 #include "config.h"
 #include "motor.h"
 
-Motor<Config::MOTOR_PIN, Config::PWM_FREQ, Config::PWM_RESOLUTION> motor;
+Motor<Config::MOTOR_PIN, Config::PWM_CHANNEL, Config::PWM_FREQ, Config::PWM_RESOLUTION> motor;
 
 volatile bool buttonStateChanged = false;
 
@@ -87,6 +87,7 @@ void handleButton()
 void setup()
 {
     Serial.begin(115200);
+    delay(800);
 
     motor.init();
 

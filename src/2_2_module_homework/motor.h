@@ -10,7 +10,7 @@ enum class MotorMode
     RAMP_DOWN
 };
 
-template <uint8_t Pin, uint32_t Freq = 5000, uint8_t Res = 8>
+template <uint8_t Pin, uint8_t Channel = 0, uint32_t Freq = 5000, uint8_t Res = 8>
 class Motor
 {
 private:
@@ -22,7 +22,8 @@ private:
 public:
     void init()
     {
-        ledcAttach(Pin, Freq, Res);
+        ledcSetup(Channel, Freq, Res);
+        ledcAttachPin(Pin, Channel);
         setDuty(0);
     }
 
@@ -96,6 +97,6 @@ public:
 private:
     void setDuty(uint8_t duty)
     {
-        ledcWrite(Pin, duty);
+        ledcWrite(Channel, duty);
     }
 };
